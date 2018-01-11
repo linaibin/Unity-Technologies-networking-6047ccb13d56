@@ -1,0 +1,209 @@
+1.在NetworkConnection类：
+	30行，增加groupId字段，默认值为0，
+			public  uint groupId = 0;
+
+	332行，增加SetGroupId方法，作用为给groupId字段赋值， 		
+			public void SetGroupId(uint mGroupId)
+			{
+				this.groupId = mGroupId;
+			}
+
+2.在NetworkIdentity类：
+	41行，增加了m_GroupId字段，
+			uint 						m_GroupId =0;
+
+	42行，增加m_Data字段，
+			string 						m_Data = string.Empty;
+
+	71行，增加了groupId属性，当NetworkIdentity在生成的时候，有被赋值过groupId时，则获取该groupId,否则，当有Owner的时候，返回Owner的groupID,否则返回0；
+			public uint groupId{ get { return m_GroupId > 0 ? m_GroupId : (m_ClientAuthorityOwner == null ? 0 : m_ClientAuthorityOwner.groupId); } }
+
+	73行，增加了data属性，
+			public string data{get{ return m_Data; } set{ m_Data = value; }}
+	195行，增加强制更改Owner的GroupID
+			public void ForceSetGroupId(uint mGroupId)
+			{
+				m_GroupId = mGroupId;
+			}
+
+	871行，RebuildObservers方法增加groupID参数，默认为0;
+			public void RebuildObservers(bool initialize, uint mGroupId = 0)
+
+	887行，增加mGroupId判断
+			mGroupId = mGroupId == 0 ? this.groupId : mGroupId;
+
+	898行，增加AddObserver时对于mGgroupId一致性判断
+			if (conn.groupId != mGroupId) continue;
+
+	907行，增加AddObserver时对于mGgroupId一致性判断
+			if (conn.groupId != mGroupId) continue;
+
+	923行，增加AddObserver时对于mGgroupId一致性判断
+			if (conn.groupId != mGroupId) continue;
+
+
+
+4.NetworkServer:
+	444行，SendWriterToReady方法增加groupID参数 ，默认为0；
+    453行，SendBytesToReady方法增加groupID参数 ，默认为0； 
+    462行，SendBytesToReady方法中，增加只发送给groupID一样的conn
+  			if (conn != null && conn.isReady && conn.groupId == groupID)
+  	489行，SendBytesToReady方法中，增加只发送给groupID一样的observers的conn
+  			if(conn.groupId != groupID)
+			{
+				continue;
+			}
+	1125行，SetClientReadyInternal方法中，localConnection不为空时，AddObserver时只增加groupID与参数conn的groupID一致的。
+			if (uv != null && uv.gameObject != null && uv.groupId == conn.groupId)
+
+	1157行，SetClientReadyInternal方法中，localConnection为空时，AddObserver时只增加groupID与参数conn的groupID一致的。
+			if (uv.groupId != conn.groupId) 
+			{
+				continue;
+			}
+
+	1291行，SpawnObject方法增加groupID，data参数
+
+	1309行，增加强制更改owner的groupID
+			objNetworkIdentity.ForceSetGroupId (groupID);
+
+	1311行，增加更改owner的data
+			objNetworkIdentity.data = data;
+
+	1333行，SendSpawnMessage方法中，为ObjectSpawnMessage增加data
+			msg.data = uv.data;
+
+	1504行，Spawn方法增加groupID参数，默认值为0,增加data参数，默认值为""
+			static public void Spawn(GameObject obj, uint groupID = 0, string data = "")
+	        {
+	            if (!VerifyCanSpawn(obj))
+	            {
+	                return;
+	            }
+
+				instance.SpawnObject(obj, groupID, data);
+	        }
+
+	1586行，Spawn方法增加groupID参数,增加data参数
+			static public void Spawn(GameObject obj, NetworkHash128 assetId, uint groupID, string data)
+	        {
+	            if (!VerifyCanSpawn(obj))
+	            {
+	                return;
+	            }
+
+	            NetworkIdentity id;
+	            if (GetNetworkIdentity(obj, out id))
+	            {
+	                id.SetDynamicAssetId(assetId);
+	            }
+	            instance.SpawnObject(obj);
+	        }
+
+	1574行，SpawnWithClientAuthority方法增加data参数，默认值为“”；
+			static public bool SpawnWithClientAuthority(GameObject obj, NetworkHash128 assetId, NetworkConnection conn, string data = "")
+
+	915行，InternalAddPlayerForConnection增加参数data
+			internal bool InternalAddPlayerForConnection(NetworkConnection conn, GameObject playerGameObject, short playerControllerId, string data)
+
+	947行，InternalAddPlayerForConnection增加参数data中使用data参数给playerNetworkIdentity.data赋值
+			playerNetworkIdentity.data = data;
+
+	900行，AddPlayerForConnection增加data参数，默认值为""
+			static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId, NetworkHash128 assetId, string data = "")
+
+	910行，AddPlayerForConnection增加data参数，默认值为""
+			static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId, string data = "")
+
+	1024行， spawn方法增加groupID和data数据
+			Spawn(playerGameObject, conn.groupId, "ddddaaatttaaa");
+
+	1536行，SpawnWithClientAuthority增加参数data，默认值为""
+			static public Boolean SpawnWithClientAuthority(GameObject obj, GameObject player, string data)
+
+	1551行，SpawnWithClientAuthority中使用传入的参数
+			return SpawnWithClientAuthority(obj, uv.connectionToClient, data);
+
+
+	1554行，SpawnWithClientAuthority增加参数data，默认值为"";
+			static public bool SpawnWithClientAuthority(GameObject obj, NetworkConnection conn, string data)
+
+	1556行，SpawnWithClientAuthority方法中Spawn时，使用groupID，以及新加的参数
+			Spawn(obj, conn.groupId, data);
+
+	1781行，SpawnObjects方法中Spawn时，使用netID的groupID;
+			Spawn(netId.gameObject, netId.groupId);
+
+
+
+
+
+5.UNetwork.cs
+	14行，增加携带数据的在client生成物体的delegate
+			public delegate GameObject SpawnExDelegate(Vector3 position, NetworkHash128 assetId, string data);
+
+6.ClientScene
+	446行，增加使用SpawnExDelegate的RegisterPrefab方法
+			static public void RegisterPrefab(GameObject prefab, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+			{
+				NetworkScene.RegisterPrefab(prefab, spawnHandler, unspawnHandler);
+			}
+
+	461行，增加使用SpawnExDelegate的RegisterSpawnHandler方法
+	        //add by linaibin
+	        static public void RegisterSpawnHandler(NetworkHash128 assetId, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+	        {
+	            NetworkScene.RegisterSpawnHandler(assetId, spawnHandler, unspawnHandler);
+	        }
+
+	549行，调用ApplySpawnPayload方法时增加data数据
+			ApplySpawnPayload(localNetworkIdentity, s_ObjectSpawnMessage.position, s_ObjectSpawnMessage.payload, s_ObjectSpawnMessage.netId, null, s_ObjectSpawnMessage.data);
+
+
+	555行，增加SpawnExDelegate
+	            SpawnExDelegate exHandler;
+
+	593行，增加使用SpawnExDelete的情况
+			else if (NetworkScene.GetSpawnHandler(s_ObjectSpawnMessage.assetId, out exHandler))
+
+	426行，增加获取SpawnExDelegate的方法名
+			SpawnExDelegate exHandler;
+			if(NetworkScene.GetSpawnHandler(assetId, out exHandler))
+			{
+				return exHandler.GetMethodName();
+			}
+
+	499行，ApplySpawnPayload方法增加data参数，默认值为“”
+			static void ApplySpawnPayload(NetworkIdentity uv, Vector3 position, byte[] payload, NetworkInstanceId netId, GameObject newGameObject, string data = "")
+
+
+7.NetworkScene
+	19行，增加存储SpawnExDelegate的dictionary
+			static Dictionary<NetworkHash128, SpawnExDelegate> s_SpawnExHandlers = new Dictionary<NetworkHash128, SpawnExDelegate>();
+
+
+	27行，增加存储SpawnExDelegate的dictionary
+			static internal Dictionary<NetworkHash128, SpawnExDelegate> spawnExHandlers { get { return s_SpawnExHandlers; }}
+
+	175行，增加使用SpawnExDelegate的RegisterSpawnHandler方法
+			static internal void RegisterSpawnHandler(NetworkHash128 assetId, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+
+	218行，在UnregisterPrefab的时候同时移除掉SpawnExDelegate
+			s_SpawnExHandlers.Remove(identity.assetId);
+
+	249行，增加使用SpawnExDelegate的RegisterPrefab方法
+			static internal void RegisterPrefab(GameObject prefab, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+
+	299行，增加使用SpawnExDelegate的GetSpawnHandler方法
+		static internal bool GetSpawnHandler(NetworkHash128 assetId, out SpawnExDelegate handler)
+
+Messages.cs
+	337行，增加存储data的字段
+	        public string data = string.Empty;
+
+	345行，增加Deserialize时，增加data的读取
+			data = reader.ReadString();
+
+	360行，增加Serialize时，增加data的写入
+			writer.Write(data);
+
