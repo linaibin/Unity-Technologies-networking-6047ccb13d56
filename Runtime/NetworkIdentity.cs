@@ -38,6 +38,9 @@ namespace UnityEngine.Networking
         List<NetworkConnection>     m_Observers;
         NetworkConnection           m_ClientAuthorityOwner;
 
+		uint 						m_GroupId =0;
+		string 						m_Data = string.Empty;
+
         // member used to mark a identity for future reset
         // check MarkForReset for more information.
         bool                        m_Reset = false;
@@ -64,6 +67,10 @@ namespace UnityEngine.Networking
         public bool serverOnly { get { return m_ServerOnly; } set { m_ServerOnly = value; } }
         public bool localPlayerAuthority { get { return m_LocalPlayerAuthority; } set { m_LocalPlayerAuthority = value; } }
         public NetworkConnection clientAuthorityOwner { get { return m_ClientAuthorityOwner; }}
+
+		public uint groupId{ get { return m_GroupId > 0 ? m_GroupId : (m_ClientAuthorityOwner == null ? 0 : m_ClientAuthorityOwner.groupId); } }
+
+		public string data{get{ return m_Data; } set{ m_Data = value; }}
 
         public NetworkHash128 assetId
         {
@@ -184,6 +191,11 @@ namespace UnityEngine.Networking
         {
             m_SceneId = new NetworkSceneId((uint)newSceneId);
         }
+
+		public void ForceSetGroupId(uint mGroupId)
+		{
+			m_GroupId = mGroupId;
+		}
 
         // only used in SetLocalObject
         internal void UpdateClientServer(bool isClientFlag, bool isServerFlag)
@@ -856,13 +868,16 @@ namespace UnityEngine.Networking
             conn.RemoveFromVisList(this, false);
         }
 
-        public void RebuildObservers(bool initialize)
+		public void RebuildObservers(bool initialize, uint mGroupId = 0)
         {
             if (m_Observers == null)
                 return;
 
             bool changed = false;
             bool result = false;
+
+			mGroupId = mGroupId == 0 ? this.groupId : mGroupId;
+
             HashSet<NetworkConnection> newObservers = new HashSet<NetworkConnection>();
             HashSet<NetworkConnection> oldObservers = new HashSet<NetworkConnection>(m_Observers);
 
@@ -879,7 +894,8 @@ namespace UnityEngine.Networking
                     for (int i = 0; i < NetworkServer.connections.Count; i++)
                     {
                         var conn = NetworkServer.connections[i];
-                        if (conn == null) continue;
+						if (conn == null) continue;
+						if (conn.groupId != mGroupId) continue;
                         if (conn.isReady)
                             AddObserver(conn);
                     }
@@ -888,7 +904,8 @@ namespace UnityEngine.Networking
                     {
                         var conn = NetworkServer.localConnections[i];
                         if (conn == null) continue;
-                        if (conn.isReady)
+						if (conn.groupId != mGroupId) continue;
+						if (conn.isReady)
                             AddObserver(conn);
                     }
                 }
@@ -902,6 +919,8 @@ namespace UnityEngine.Networking
                 {
                     continue;
                 }
+
+				if (conn.groupId != mGroupId) continue;
 
                 if (!conn.isReady)
                 {

@@ -16,12 +16,16 @@ namespace UnityEngine.Networking
         static Dictionary<NetworkHash128, GameObject> s_GuidToPrefab = new Dictionary<NetworkHash128, GameObject>();
         static Dictionary<NetworkHash128, SpawnDelegate> s_SpawnHandlers = new Dictionary<NetworkHash128, SpawnDelegate>();
         static Dictionary<NetworkHash128, UnSpawnDelegate> s_UnspawnHandlers = new Dictionary<NetworkHash128, UnSpawnDelegate>();
+		//add by linaibin
+		static Dictionary<NetworkHash128, SpawnExDelegate> s_SpawnExHandlers = new Dictionary<NetworkHash128, SpawnExDelegate>();
 
-        internal Dictionary<NetworkInstanceId, NetworkIdentity> localObjects { get { return m_LocalObjects; }}
+		internal Dictionary<NetworkInstanceId, NetworkIdentity> localObjects { get { return m_LocalObjects; }}
 
         static internal Dictionary<NetworkHash128, GameObject> guidToPrefab { get { return s_GuidToPrefab; }}
         static internal Dictionary<NetworkHash128, SpawnDelegate> spawnHandlers { get { return s_SpawnHandlers; }}
-        static internal Dictionary<NetworkHash128, UnSpawnDelegate> unspawnHandlers { get { return s_UnspawnHandlers; }}
+		//add by linaibin
+		static internal Dictionary<NetworkHash128, SpawnExDelegate> spawnExHandlers { get { return s_SpawnExHandlers; }}
+		static internal Dictionary<NetworkHash128, UnSpawnDelegate> unspawnHandlers { get { return s_UnspawnHandlers; }}
 
         internal void Shutdown()
         {
@@ -171,6 +175,21 @@ namespace UnityEngine.Networking
             s_UnspawnHandlers.Remove(assetId);
         }
 
+		//add by linaibin
+		static internal void RegisterSpawnHandler(NetworkHash128 assetId, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+		{
+			if (spawnHandler == null || unspawnHandler == null)
+			{
+				if (LogFilter.logError) { Debug.LogError("RegisterSpawnHandler custom spawn function null for " + assetId); }
+				return;
+			}
+
+			if (LogFilter.logDebug) { Debug.Log("RegisterSpawnHandler asset '" + assetId + "' " + spawnHandler.GetMethodName() + "/" + unspawnHandler.GetMethodName()); }
+
+			s_SpawnExHandlers[assetId] = spawnHandler;
+			s_UnspawnHandlers[assetId] = unspawnHandler;
+		}
+
         static internal void RegisterSpawnHandler(NetworkHash128 assetId, SpawnDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
         {
             if (spawnHandler == null || unspawnHandler == null)
@@ -195,7 +214,9 @@ namespace UnityEngine.Networking
             }
             s_SpawnHandlers.Remove(identity.assetId);
             s_UnspawnHandlers.Remove(identity.assetId);
-        }
+			//add by linaibin
+			s_SpawnExHandlers.Remove(identity.assetId);
+		}
 
         static internal void RegisterPrefab(GameObject prefab, SpawnDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
         {
@@ -224,6 +245,34 @@ namespace UnityEngine.Networking
             s_UnspawnHandlers[identity.assetId] = unspawnHandler;
         }
 
+		//add by linaibin
+		static internal void RegisterPrefab(GameObject prefab, SpawnExDelegate spawnHandler, UnSpawnDelegate unspawnHandler)
+		{
+			NetworkIdentity identity = prefab.GetComponent<NetworkIdentity>();
+			if (identity == null)
+			{
+				if (LogFilter.logError) { Debug.LogError("Could not register '" + prefab.name + "' since it contains no NetworkIdentity component"); }
+				return;
+			}
+
+			if (spawnHandler == null || unspawnHandler == null)
+			{
+				if (LogFilter.logError) { Debug.LogError("RegisterPrefab custom spawn function null for " + identity.assetId); }
+				return;
+			}
+
+			if (!identity.assetId.IsValid())
+			{
+				if (LogFilter.logError) { Debug.LogError("RegisterPrefab game object " + prefab.name + " has no prefab. Use RegisterSpawnHandler() instead?"); }
+				return;
+			}
+
+			if (LogFilter.logDebug) { Debug.Log("Registering custom prefab '" + prefab.name + "' as asset:" + identity.assetId + " " + spawnHandler.GetMethodName() + "/" + unspawnHandler.GetMethodName()); }
+
+			s_SpawnExHandlers[identity.assetId] = spawnHandler;
+			s_UnspawnHandlers[identity.assetId] = unspawnHandler;
+		}
+
         static internal bool GetSpawnHandler(NetworkHash128 assetId, out SpawnDelegate handler)
         {
             if (s_SpawnHandlers.ContainsKey(assetId))
@@ -245,6 +294,18 @@ namespace UnityEngine.Networking
             }
             return false;
         }
+
+		//add by linaibin
+		static internal bool GetSpawnHandler(NetworkHash128 assetId, out SpawnExDelegate handler)
+		{
+			if (s_SpawnExHandlers.ContainsKey(assetId))
+			{
+				handler = s_SpawnExHandlers[assetId];
+				return true;
+			}
+			handler = null;
+			return false;
+		}
 
         internal void DestroyAllClientObjects()
         {

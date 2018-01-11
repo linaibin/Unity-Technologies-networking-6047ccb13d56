@@ -27,7 +27,8 @@ namespace UnityEngine.Networking
         const int k_MaxMessageLogSize = 150;
         private NetworkError error;
 
-        public int hostId = -1;
+		public  uint groupId = 0;
+		public int hostId = -1;
         public int connectionId = -1;
         public bool isReady;
         public string address;
@@ -327,6 +328,12 @@ namespace UnityEngine.Networking
                 m_Channels[channelId].maxDelay = seconds;
             }
         }
+
+		//add by linaibin
+		public void SetGroupId(uint mGroupId)
+		{
+			this.groupId = mGroupId;
+		}
 
         public virtual bool Send(short msgType, MessageBase msg)
         {

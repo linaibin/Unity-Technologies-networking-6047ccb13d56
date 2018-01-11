@@ -441,16 +441,16 @@ namespace UnityEngine.Networking
             return result;
         }
 
-        static public void SendWriterToReady(GameObject contextObj, NetworkWriter writer, int channelId)
+		static public void SendWriterToReady(GameObject contextObj, NetworkWriter writer, int channelId, uint groupID = 0)
         {
             if (writer.AsArraySegment().Count > short.MaxValue)
             {
                 throw new UnityException("NetworkWriter used buffer is too big!");
             }
-            SendBytesToReady(contextObj, writer.AsArraySegment().Array, writer.AsArraySegment().Count, channelId);
+			SendBytesToReady(contextObj, writer.AsArraySegment().Array, writer.AsArraySegment().Count, channelId, groupID);
         }
 
-        static public void SendBytesToReady(GameObject contextObj, byte[] buffer, int numBytes, int channelId)
+		static public void SendBytesToReady(GameObject contextObj, byte[] buffer, int numBytes, int channelId, uint groupID = 0)
         {
             if (contextObj == null)
             {
@@ -459,7 +459,8 @@ namespace UnityEngine.Networking
                 for (int i = 0; i < connections.Count; i++)
                 {
                     NetworkConnection conn = connections[i];
-                    if (conn != null && conn.isReady)
+					//只发送给conn,不为空。并且 状态是ready，并且groupID是一样的conn
+					if (conn != null && conn.isReady && conn.groupId == groupID)
                     {
                         if (!conn.SendBytes(buffer, numBytes, channelId))
                         {
@@ -484,6 +485,11 @@ namespace UnityEngine.Networking
                     var conn = uv.observers[i];
                     if (!conn.isReady)
                         continue;
+					//如果不是同一个groupID,则跳过不发送
+					if(conn.groupId != groupID)
+					{
+						continue;
+					}
 
                     if (!conn.SendBytes(buffer, numBytes, channelId))
                     {
@@ -891,22 +897,22 @@ namespace UnityEngine.Networking
             return instance.InternalReplacePlayerForConnection(conn, player, playerControllerId);
         }
 
-        static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId, NetworkHash128 assetId)
+		static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId, NetworkHash128 assetId, string data = "")
         {
             NetworkIdentity id;
             if (GetNetworkIdentity(player, out id))
             {
                 id.SetDynamicAssetId(assetId);
             }
-            return instance.InternalAddPlayerForConnection(conn, player, playerControllerId);
+			return instance.InternalAddPlayerForConnection(conn, player, playerControllerId, data);
         }
 
-        static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId)
+		static public bool AddPlayerForConnection(NetworkConnection conn, GameObject player, short playerControllerId, string data = "")
         {
-            return instance.InternalAddPlayerForConnection(conn, player, playerControllerId);
+            return instance.InternalAddPlayerForConnection(conn, player, playerControllerId, data);
         }
 
-        internal bool InternalAddPlayerForConnection(NetworkConnection conn, GameObject playerGameObject, short playerControllerId)
+		internal bool InternalAddPlayerForConnection(NetworkConnection conn, GameObject playerGameObject, short playerControllerId, string data)
         {
             NetworkIdentity playerNetworkIdentity;
             if (!GetNetworkIdentity(playerGameObject, out playerNetworkIdentity))
@@ -937,6 +943,8 @@ namespace UnityEngine.Networking
 
             // Set the playerControllerId on the NetworkIdentity on the server, NetworkIdentity.SetLocalPlayer is not called on the server (it is on clients and that sets the playerControllerId there)
             playerNetworkIdentity.SetConnectionToClient(conn, newPlayerController.playerControllerId);
+
+			playerNetworkIdentity.data = data;
 
             SetClientReady(conn);
 
@@ -1013,7 +1021,7 @@ namespace UnityEngine.Networking
             {
                 // it is allowed to provide an already spawned object as the new player object.
                 // so dont spawn it again.
-                Spawn(playerGameObject);
+				Spawn(playerGameObject, conn.groupId, "ddddaaatttaaa");
             }
 
             OwnerMessage owner = new OwnerMessage();
@@ -1081,12 +1089,12 @@ namespace UnityEngine.Networking
             return true;
         }
 
-        static public void SetClientReady(NetworkConnection conn)
+		static public void SetClientReady(NetworkConnection conn)
         {
-            instance.SetClientReadyInternal(conn);
+			instance.SetClientReadyInternal(conn);
         }
 
-        internal void SetClientReadyInternal(NetworkConnection conn)
+		internal void SetClientReadyInternal(NetworkConnection conn)
         {
             if (LogFilter.logDebug) { Debug.Log("SetClientReadyInternal for conn:" + conn.connectionId); }
 
@@ -1116,7 +1124,7 @@ namespace UnityEngine.Networking
                 {
                     // Need to call OnStartClient directly here, as it's already been added to the local object dictionary
                     // in the above SetLocalPlayer call
-                    if (uv != null && uv.gameObject != null)
+					if (uv != null && uv.gameObject != null && uv.groupId == conn.groupId)
                     {
                         var vis = uv.OnCheckObserver(conn);
                         if (vis)
@@ -1147,6 +1155,10 @@ namespace UnityEngine.Networking
                     if (LogFilter.logWarn) { Debug.LogWarning("Invalid object found in server local object list (null NetworkIdentity)."); }
                     continue;
                 }
+
+				if (uv.groupId != conn.groupId) {
+					continue;
+				}
                 if (!uv.gameObject.activeSelf)
                 {
                     continue;
@@ -1278,7 +1290,7 @@ namespace UnityEngine.Networking
             uv.HandleCommand(cmdHash, netMsg.reader);
         }
 
-        internal void SpawnObject(GameObject obj)
+		internal void SpawnObject(GameObject obj, uint groupID, string data)
         {
             if (!NetworkServer.active)
             {
@@ -1295,6 +1307,10 @@ namespace UnityEngine.Networking
             objNetworkIdentity.Reset();
 
             objNetworkIdentity.OnStartServer(false);
+
+			objNetworkIdentity.ForceSetGroupId (groupID);
+
+			objNetworkIdentity.data = data;
 
             if (LogFilter.logDebug) { Debug.Log("SpawnObject instance ID " + objNetworkIdentity.netId + " asset ID " + objNetworkIdentity.assetId); }
 
@@ -1314,7 +1330,7 @@ namespace UnityEngine.Networking
                 msg.assetId = uv.assetId;
                 msg.position = uv.transform.position;
                 msg.rotation = uv.transform.rotation;
-
+				msg.data = uv.data;
                 // include synch data
                 NetworkWriter writer = new NetworkWriter();
                 uv.UNetSerializeAllVars(writer);
@@ -1487,14 +1503,14 @@ namespace UnityEngine.Networking
             objects.Clear();
         }
 
-        static public void Spawn(GameObject obj)
+		static public void Spawn(GameObject obj, uint groupID = 0, string data = "")
         {
             if (!VerifyCanSpawn(obj))
             {
                 return;
             }
 
-            instance.SpawnObject(obj);
+			instance.SpawnObject(obj, groupID, data);
         }
 
         static bool CheckForPrefab(GameObject obj)
@@ -1517,7 +1533,7 @@ namespace UnityEngine.Networking
             return true;
         }
 
-        static public Boolean SpawnWithClientAuthority(GameObject obj, GameObject player)
+		static public Boolean SpawnWithClientAuthority(GameObject obj, GameObject player, string data)
         {
             var uv = player.GetComponent<NetworkIdentity>();
             if (uv == null)
@@ -1532,10 +1548,10 @@ namespace UnityEngine.Networking
                 return false;
             }
 
-            return SpawnWithClientAuthority(obj, uv.connectionToClient);
+			return SpawnWithClientAuthority(obj, uv.connectionToClient, data);
         }
 
-        static public bool SpawnWithClientAuthority(GameObject obj, NetworkConnection conn)
+		static public bool SpawnWithClientAuthority(GameObject obj, NetworkConnection conn, string data = "")
         {
             if (!conn.isReady)
             {
@@ -1543,7 +1559,7 @@ namespace UnityEngine.Networking
                 return false;
             }
 
-            Spawn(obj);
+			Spawn(obj, conn.groupId, data);
 
             var uv = obj.GetComponent<NetworkIdentity>();
             if (uv == null || !uv.isServer)
@@ -1555,9 +1571,9 @@ namespace UnityEngine.Networking
             return uv.AssignClientAuthority(conn);
         }
 
-        static public bool SpawnWithClientAuthority(GameObject obj, NetworkHash128 assetId, NetworkConnection conn)
+		static public bool SpawnWithClientAuthority(GameObject obj, NetworkHash128 assetId, NetworkConnection conn, string data = "")
         {
-            Spawn(obj, assetId);
+			Spawn(obj, assetId, conn.groupId, data);
 
             var uv = obj.GetComponent<NetworkIdentity>();
             if (uv == null || !uv.isServer)
@@ -1569,7 +1585,7 @@ namespace UnityEngine.Networking
             return uv.AssignClientAuthority(conn);
         }
 
-        static public void Spawn(GameObject obj, NetworkHash128 assetId)
+		static public void Spawn(GameObject obj, NetworkHash128 assetId, uint groupID, string data)
         {
             if (!VerifyCanSpawn(obj))
             {
@@ -1581,7 +1597,7 @@ namespace UnityEngine.Networking
             {
                 id.SetDynamicAssetId(assetId);
             }
-            instance.SpawnObject(obj);
+			instance.SpawnObject(obj, groupID, data);
         }
 
         static public void Destroy(GameObject obj)
@@ -1762,7 +1778,7 @@ namespace UnityEngine.Networking
                 if (!ValidateSceneObject(netId))
                     continue;
 
-                Spawn(netId.gameObject);
+				Spawn(netId.gameObject, netId.groupId);
 
                 // these objects are server authority - even if "localPlayerAuthority" is set on them
                 netId.ForceAuthority(true);
