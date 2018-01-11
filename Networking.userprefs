@@ -2,10 +2,12 @@
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="Unity.Instance.Unity Editor" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Runtime\NetworkServer.cs">
     <Files>
-      <File FileName="Runtime\NetworkConnection.cs" Line="1" Column="1" />
-      <File FileName="Runtime\NetworkIdentity.cs" Line="1" Column="1" />
-      <File FileName="Runtime\NetworkServer.cs" Line="900" Column="50" />
-      <File FileName="Runtime\UNetwork.cs" Line="25" Column="44" />
+      <File FileName="Runtime\NetworkConnection.cs" Line="354" Column="10" />
+      <File FileName="Runtime\NetworkIdentity.cs" Line="871" Column="3" />
+      <File FileName="Runtime\NetworkServer.cs" Line="1762" Column="29" />
+      <File FileName="Runtime\ClientScene.cs" Line="583" Column="66" />
+      <File FileName="Runtime\Messages.cs" Line="337" Column="20" />
+      <File FileName="Runtime\NetworkMigrationManager.cs" Line="499" Column="49" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
