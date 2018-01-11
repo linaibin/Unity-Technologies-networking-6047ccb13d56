@@ -1,0 +1,6 @@
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\bin\Debug\UnityEngine.Networking.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\bin\Debug\UnityEngine.Networking.pdb
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\bin\Debug\UnityEditor.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\bin\Debug\UnityEngine.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\obj\Debug\UnityEngine.Networking.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Runtime-Editor\obj\Debug\UnityEngine.Networking.pdb

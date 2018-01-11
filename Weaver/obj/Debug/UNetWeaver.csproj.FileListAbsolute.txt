@@ -1,0 +1,10 @@
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.UNetWeaver.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.UNetWeaver.pdb
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.Mdb.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.Pdb.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.pdb
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.Mdb.pdb
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\bin\Debug\Unity.Cecil.Pdb.pdb
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\obj\Debug\Unity.UNetWeaver.dll
+D:\GitHub\Unity-Technologies-networking-6047ccb13d56\Weaver\obj\Debug\Unity.UNetWeaver.pdb
